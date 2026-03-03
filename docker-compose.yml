@@ -1,0 +1,45 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    environment:
+      DB_HOST: db
+      DB_USER: mateus
+      DB_PASS: mypassword
+      DB_NAME: mydb
+    depends_on:
+      db:
+        condition: service_started
+    networks:
+      - internal-net
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: mateus
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    ports:
+      - 5432:5432
+    networks:
+      - internal-net
+    healthcheck:
+      test:
+        ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+networks:
+  internal-net:
+    driver: bridge
+
+volumes:
+  db-data:

@@ -5,11 +5,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - 3000:3000
-    environment:
-      DB_HOST: db
-      DB_USER: mateus
-      DB_PASS: mypassword
-      DB_NAME: mydb
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_started
@@ -19,10 +16,8 @@ services:
   db:
     image: postgres:16-alpine
     restart: always
-    environment:
-      POSTGRES_USER: mateus
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydb
+    env_file:
+      - .env
     ports:
       - 5432:5432
     networks:

@@ -111,23 +111,27 @@ volumes:
 
 ## Como Executar
 
-1️⃣ Build e subir os containers
+```bash
+cp .env.example .env
 ```
+
+1️⃣ Build e subir os containers
+```bash
 docker compose up --build
 ```
 
 2️⃣ Rodar em background
-```
+```bash
 docker compose up -d --build
 ```
 
 3️⃣ Parar os containers
-```
+```bash
 docker compose down
 ```
 
 4️⃣ Remover volumes também
-```
+```bash
 docker compose down -v
 ```
 

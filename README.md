@@ -1,198 +1,201 @@
-# Simple Web App – Docker + Docker Compose
+# Semana 3 – Containers (Docker + Docker Compose + Nginx)
 
 ## Objetivo
 
-O objetivo deste projeto é:
+Containerizar uma aplicação web e orquestrar múltiplos serviços utilizando **Docker** e **Docker Compose**, simulando uma arquitetura mais próxima de ambientes reais utilizados em clientes.
 
-- Containerizar uma aplicação web simples usando Docker
+A aplicação foi dividida em **frontend**, **backend**, **banco de dados** e **reverse proxy**, permitindo demonstrar comunicação entre serviços dentro de uma rede Docker.
 
-- Orquestrar a aplicação e um banco de dados utilizando Docker Compose
+---
 
-- Garantir isolamento, portabilidade e facilidade de execução do ambiente
+# Arquitetura
 
-Este projeto demonstra conceitos fundamentais de:
+```
+Browser
+   ↓
+Nginx (Reverse Proxy)
+   ↓
+Frontend (Next.js)
+   ↓
+Backend (Express API)
+   ↓
+PostgreSQL
+```
 
-- Criação de imagens Docker
+* **Nginx**: atua como reverse proxy e ponto de entrada da aplicação.
+* **Frontend**: aplicação Next.js responsável pela interface web.
+* **Backend**: API construída com Express responsável por acessar o banco.
+* **Database**: PostgreSQL executando em container separado.
 
-- Boas práticas em Dockerfile
+Todos os serviços se comunicam através de uma **rede interna Docker**.
 
-- Comunicação entre containers
+---
 
-- Gerenciamento de variáveis de ambiente
+# Estrutura do Projeto
 
-- Orquestração multi-container
-
-## Arquitetura
-
-Usuário → Web App (Container)
-                ↓
-           Database (Container)
-
-A aplicação web se conecta ao banco de dados através da rede interna criada automaticamente pelo Docker Compose.
-
-## Estrutura do Projeto
+```
 .
-├── Dockerfile
 ├── docker-compose.yml
-├── .dockerignore
-├── package.json
-├── src/
-│   └── index.js
-└── README.md
+├── nginx
+│   └── default.conf
+│
+├── frontend
+│   ├── Dockerfile
+│   ├── package.json
+│   └── app/
+│
+├── backend
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+│       └── index.js
+│
+└── .env
+```
 
-## Dockerfile
+---
 
-Responsável por:
+# Serviços
 
-- Utilizar uma imagem base oficial (Node Alpine)
+## Nginx (Reverse Proxy)
 
-- Definir diretório de trabalho
+O Nginx atua como **gateway da aplicação**, encaminhando requisições para os serviços internos.
 
-- Copiar arquivos
+Regras de roteamento:
 
-- Instalar dependências
+* `/` → **Frontend (Next.js)**
+* `/api/*` → **Backend (Express)**
 
-- Definir comando de inicialização
+Isso permite expor **apenas um serviço público**, mantendo backend e banco isolados dentro da rede Docker.
 
-Exemplo:
+---
 
-```bash
-FROM node:22-alpine
+## Frontend
+
+Aplicação construída com **Next.js**, responsável por renderizar a interface web e consumir a API.
+
+O container utiliza **multi-stage build** para simular um ambiente mais próximo de produção.
+
+### Dockerfile (resumo)
+
+```dockerfile
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
+RUN npm run build
+
+FROM node:22-alpine
+
+WORKDIR /app
+COPY --from=builder /app ./
+
+ENV NODE_ENV=production
 
 EXPOSE 3000
-
-CMD ["node", "src/index.js"]
+CMD ["npm", "start"]
 ```
 
-## Docker Compose
+---
 
-O docker-compose.yml sobe dois serviços:
+## Backend
 
-app → aplicação web
+API simples construída com **Express**, responsável por conectar ao banco PostgreSQL.
 
-db → banco de dados (ex: PostgreSQL ou MySQL)
+Endpoints implementados:
 
-Exemplo com PostgreSQL:
-
-```bash
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      DB_HOST: db
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: appdb
-    depends_on:
-      - db
-
-  db:
-    image: postgres:16-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: appdb
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-volumes:
-  db_data:
+```
+GET /health
+GET /db-time
 ```
 
-## Como Executar
+Exemplo de endpoint de healthcheck:
 
-```bash
-cp .env.example .env
+```javascript
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
 ```
 
-1️⃣ Build e subir os containers
-```bash
+---
+
+## Database
+
+Banco de dados **PostgreSQL** rodando em container utilizando a imagem oficial:
+
+```
+postgres:16-alpine
+```
+
+Persistência de dados é garantida através de um **volume Docker**.
+
+---
+
+# Docker Compose
+
+O `docker-compose.yml` define quatro serviços:
+
+* `nginx`
+* `frontend`
+* `backend`
+* `db`
+
+Principais recursos utilizados:
+
+* build de **imagens customizadas**
+* **rede interna Docker**
+* **reverse proxy**
+* **variáveis de ambiente**
+* **healthcheck**
+* **volumes para persistência**
+
+---
+
+# Como Executar
+
+Build e inicialização dos containers:
+
+```
 docker compose up --build
 ```
 
-2️⃣ Rodar em background
-```bash
-docker compose up -d --build
+A aplicação ficará disponível em:
+
+```
+http://localhost
 ```
 
-3️⃣ Parar os containers
-```bash
-docker compose down
+Testes de API:
+
+```
+curl http://localhost/api/health
+curl http://localhost/api/db-time
 ```
 
-4️⃣ Remover volumes também
-```bash
-docker compose down -v
-```
+---
 
-## Acesso
+# Conceitos Praticados
 
-Aplicação disponível em:
+Durante o desafio foram praticados os seguintes conceitos:
 
-http://localhost:3000
+* criação de **Dockerfiles**
+* **multi-stage builds**
+* construção de **imagens customizadas**
+* **Docker Compose** para orquestração
+* comunicação entre containers via **rede interna**
+* **reverse proxy com Nginx**
+* **volumes** para persistência de dados
+* **healthchecks**
+* separação de serviços em **frontend, backend e database**
 
-## Comunicação Entre Containers
+---
 
-O serviço app se conecta ao banco usando:
+# Conclusão
 
-```env
-DB_HOST=db
-```
+Este projeto demonstra como containerizar uma aplicação web moderna e organizar múltiplos serviços utilizando Docker Compose.
 
-O nome do serviço no docker-compose.yml funciona como hostname dentro da rede Docker.
-
-## Variáveis de Ambiente
-
-As variáveis são definidas no docker-compose.yml e injetadas no container.
-
-Boa prática para produção:
-
-- Utilizar .env
-
-- Não versionar credenciais reais
-
-- Usar secrets em ambientes reais
-
-## Conceitos Demonstrados
-
-- Containerização de aplicações
-
-- Multi-stage build (opcional)
-
-- Orquestração com Docker Compose
-
-- Persistência de dados com volumes
-
-- Rede interna automática
-
-- Isolamento de ambiente
-
-## Possíveis Melhorias
-
-- Implementar CI/CD para build automático
-
-- Implementar migrations automáticas
-
-- Usar multi-stage build para reduzir tamanho da imagem
-
-- Adicionar Nginx como reverse proxy
-
-## Conclusão
-
-Este projeto demonstra como:
-
-1. Empacotar uma aplicação web
-
-2. Integrar com banco de dados em ambiente isolado
-
-3. Reproduzir facilmente o ambiente em qualquer máquina
+A arquitetura utilizada simula um cenário comum em ambientes de produção, incluindo separação de serviços, uso de reverse proxy e comunicação entre containers dentro de uma rede interna.

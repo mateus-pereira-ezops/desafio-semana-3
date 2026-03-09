@@ -14,9 +14,9 @@ const pool = new Pool({
   port: Number(process.env.DB_PORT || 5432),
 });
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-app.get("/db-time", async (_req, res) => {
+app.get("/api/db-time", async (_req, res) => {
   const result = await pool.query("SELECT now() as now");
   res.json({ now: result.rows[0].now });
 });

@@ -14,5 +14,9 @@
     "training"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "init": "^0.1.2",
+    "shadcn": "^4.0.5"
+  }
 }

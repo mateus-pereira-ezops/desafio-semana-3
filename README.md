@@ -1,14 +1,14 @@
-# Semana 3 – Containers (Docker + Docker Compose + Nginx)
+# Week 3 – Containers (Docker + Docker Compose + Nginx)
 
-## Objetivo
+## Objective
 
-Containerizar uma aplicação web e orquestrar múltiplos serviços utilizando **Docker** e **Docker Compose**, simulando uma arquitetura mais próxima de ambientes reais utilizados em clientes.
+Containerize a web application and orchestrate multiple services using **Docker** and **Docker Compose**, simulating an architecture closer to real production environments.
 
-A aplicação foi dividida em **frontend**, **backend**, **banco de dados** e **reverse proxy**, permitindo demonstrar comunicação entre serviços dentro de uma rede Docker.
+The application is split into **frontend**, **backend**, **database**, and **reverse proxy**, demonstrating inter-service communication within a Docker network.
 
 ---
 
-# Arquitetura
+# Architecture
 
 ```
 Browser
@@ -22,80 +22,76 @@ Backend (Express API)
 PostgreSQL
 ```
 
-* **Nginx**: atua como reverse proxy e ponto de entrada da aplicação.
-* **Frontend**: aplicação Next.js responsável pela interface web.
-* **Backend**: API construída com Express responsável por acessar o banco.
-* **Database**: PostgreSQL executando em container separado.
+- **Nginx**: acts as a reverse proxy and the application's entry point.
+- **Frontend**: Next.js application responsible for the web interface.
+- **Backend**: Express API responsible for accessing the database.
+- **Database**: PostgreSQL running in a separate container.
 
-Todos os serviços se comunicam através de uma **rede interna Docker**.
+All services communicate through an **internal Docker network**.
 
 ---
 
-# Estrutura do Projeto
+# Project Structure
 
 ```
 .
+├── .github
+│   └── workflows
+│       ├── ci.yml
+│       ├── build.yml
+│       └── deploy.yml
 ├── docker-compose.yml
 ├── nginx
 │   └── default.conf
-│
 ├── frontend
 │   ├── Dockerfile
 │   ├── package.json
 │   └── app/
-│
 ├── backend
 │   ├── Dockerfile
 │   ├── package.json
 │   └── src/
 │       └── index.js
-│
 └── .env
 ```
 
 ---
 
-# Serviços
+# Services
 
 ## Nginx (Reverse Proxy)
 
-O Nginx atua como **gateway da aplicação**, encaminhando requisições para os serviços internos.
+Nginx acts as the **application gateway**, forwarding requests to internal services.
 
-Regras de roteamento:
+Routing rules:
 
-* `/` → **Frontend (Next.js)**
-* `/api/*` → **Backend (Express)**
+- `/` → **Frontend (Next.js)**
+- `/api/*` → **Backend (Express)**
 
-Isso permite expor **apenas um serviço público**, mantendo backend e banco isolados dentro da rede Docker.
+This allows exposing **only one public service**, keeping the backend and database isolated within the Docker network.
 
 ---
 
 ## Frontend
 
-Aplicação construída com **Next.js**, responsável por renderizar a interface web e consumir a API.
+Application built with **Next.js**, responsible for rendering the web interface and consuming the API.
 
-O container utiliza **multi-stage build** para simular um ambiente mais próximo de produção.
+The container uses a **multi-stage build** to simulate a production-like environment.
 
-### Dockerfile (resumo)
+### Dockerfile (summary)
 
 ```dockerfile
 FROM node:22-alpine AS builder
-
 WORKDIR /app
-
 COPY package.json package-lock.json ./
 RUN npm ci
-
 COPY . .
 RUN npm run build
 
 FROM node:22-alpine
-
 WORKDIR /app
 COPY --from=builder /app ./
-
 ENV NODE_ENV=production
-
 EXPOSE 3000
 CMD ["npm", "start"]
 ```
@@ -104,16 +100,16 @@ CMD ["npm", "start"]
 
 ## Backend
 
-API simples construída com **Express**, responsável por conectar ao banco PostgreSQL.
+A simple API built with **Express**, responsible for connecting to the PostgreSQL database.
 
-Endpoints implementados:
+Implemented endpoints:
 
 ```
 GET /health
 GET /db-time
 ```
 
-Exemplo de endpoint de healthcheck:
+Example healthcheck endpoint:
 
 ```javascript
 app.get("/health", (_req, res) => {
@@ -125,51 +121,101 @@ app.get("/health", (_req, res) => {
 
 ## Database
 
-Banco de dados **PostgreSQL** rodando em container utilizando a imagem oficial:
+**PostgreSQL** database running in a container using the official image:
 
 ```
 postgres:16-alpine
 ```
 
-Persistência de dados é garantida através de um **volume Docker**.
+Data persistence is ensured through a **Docker volume**.
 
 ---
 
 # Docker Compose
 
-O `docker-compose.yml` define quatro serviços:
+The `docker-compose.yml` defines four services:
 
-* `nginx`
-* `frontend`
-* `backend`
-* `db`
+- `nginx`
+- `frontend`
+- `backend`
+- `db`
 
-Principais recursos utilizados:
+Key features used:
 
-* build de **imagens customizadas**
-* **rede interna Docker**
-* **reverse proxy**
-* **variáveis de ambiente**
-* **healthcheck**
-* **volumes para persistência**
+- **custom image builds**
+- **internal Docker network**
+- **reverse proxy**
+- **environment variables**
+- **healthchecks**
+- **volumes for persistence**
 
 ---
 
-# Como Executar
+# CI/CD Pipeline
 
-Build e inicialização dos containers:
+The project uses **GitHub Actions** with three sequential workflows, each triggered by the successful completion of the previous one.
+
+```
+Push to main
+     ↓
+  CI (lint)
+     ↓
+  Build
+     ↓
+  Deploy
+```
+
+---
+
+## CI (`ci.yml`)
+
+Triggered on push to `main` or pull requests affecting `frontend/**` or `backend/**`.
+
+Runs ESLint on both services sequentially — the frontend lint only runs if the backend lint passes.
+
+```
+lint-backend → lint-frontend
+```
+
+---
+
+## Build (`build.yml`)
+
+Triggered after the CI workflow completes successfully.
+
+- Installs backend dependencies
+- Builds the Next.js frontend, generating static files in the `out/` directory
+
+---
+
+## Deploy (`deploy.yml`)
+
+Triggered after the Build workflow completes successfully.
+
+Performs the full deployment to AWS:
+
+- **Backend**: builds the Docker image, pushes it to **ECR**, and forces a new deployment on **ECS Fargate**
+- **Frontend**: builds the Next.js static output and syncs it to an **S3 bucket**
+
+All sensitive values (AWS credentials, ECR URL, S3 bucket, ECS cluster and service names) are stored as **GitHub repository secrets**.
+
+---
+
+# How to Run
+
+Build and start all containers:
 
 ```
 docker compose up --build
 ```
 
-A aplicação ficará disponível em:
+The application will be available at:
 
 ```
 http://localhost
 ```
 
-Testes de API:
+API tests:
 
 ```
 curl http://localhost/api/health
@@ -178,24 +224,26 @@ curl http://localhost/api/db-time
 
 ---
 
-# Conceitos Praticados
+# Concepts Practiced
 
-Durante o desafio foram praticados os seguintes conceitos:
-
-* criação de **Dockerfiles**
-* **multi-stage builds**
-* construção de **imagens customizadas**
-* **Docker Compose** para orquestração
-* comunicação entre containers via **rede interna**
-* **reverse proxy com Nginx**
-* **volumes** para persistência de dados
-* **healthchecks**
-* separação de serviços em **frontend, backend e database**
+- Creating **Dockerfiles**
+- **Multi-stage builds**
+- Building **custom images**
+- **Docker Compose** for orchestration
+- Inter-container communication via **internal Docker network**
+- **Reverse proxy with Nginx**
+- **Volumes** for data persistence
+- **Healthchecks**
+- Service separation into **frontend, backend, and database**
+- **CI/CD pipelines** with GitHub Actions
+- Docker image publishing to **Amazon ECR**
+- Automated deployment to **Amazon ECS Fargate**
+- Static file hosting on **Amazon S3**
 
 ---
 
-# Conclusão
+# Conclusion
 
-Este projeto demonstra como containerizar uma aplicação web moderna e organizar múltiplos serviços utilizando Docker Compose.
+This project demonstrates how to containerize a modern web application and orchestrate multiple services using Docker Compose, while also automating the full delivery lifecycle through a CI/CD pipeline.
 
-A arquitetura utilizada simula um cenário comum em ambientes de produção, incluindo separação de serviços, uso de reverse proxy e comunicação entre containers dentro de uma rede interna.
+The architecture simulates a common production scenario, including service separation, reverse proxy, inter-container communication, and automated deployments to AWS using GitHub Actions.

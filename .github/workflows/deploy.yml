@@ -42,7 +42,7 @@ jobs:
         run: |
           aws ecs update-service \
             --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
-            --service ${{ secrets.ECS_BACKEND_SERVICE_NAME}} \
+            --service ${{ secrets.ECS_BACKEND_SERVICE_NAME }} \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }}
 

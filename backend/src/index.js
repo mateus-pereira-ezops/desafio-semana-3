@@ -111,4 +111,8 @@ app.delete("/api/tasks/:id", async (req, res) => {
   res.json({ deleted: result.rows[0] });
 });
 
+app.get("/api/fail", (_req, res) => {
+  res.status(500).json({ error: "falha simulada" });
+});
+
 app.listen(port, () => console.log(`backend listening on :${port}`));

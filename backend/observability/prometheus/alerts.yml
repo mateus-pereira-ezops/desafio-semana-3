@@ -1,0 +1,31 @@
+groups:
+  - name: todo-api
+    rules:
+      - alert: ServiceDown
+        expr: up{job="todo-api"} == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Todo API está fora do ar"
+          description: "O serviço não responde há mais de 15 segundos."
+
+      - alert: HighErrorRate
+        expr: |
+          rate(http_requests_total{status_code=~"5.."}[1m]) /
+          rate(http_requests_total[1m]) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taxa de erros 5xx acima de 5%"
+          description: "Mais de 5% das requisições estão retornando erro."
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{job="todo-api"} > 150 * 1024 * 1024
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memória alta na Todo API"
+          description: "Uso de memória acima de 150MB."

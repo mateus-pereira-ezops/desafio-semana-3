@@ -7,7 +7,7 @@ services:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       frontend:
-        condition: service_started
+        condition: service_healthy
       backend:
         condition: service_started
     networks:
@@ -23,6 +23,12 @@ services:
         condition: service_started
     networks:
       - internal-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   backend:
     build: ./backend
@@ -57,9 +63,62 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
 
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./backend/observability/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+      - "--storage.tsdb.path=/prometheus"
+    depends_on:
+      - backend
+    networks:
+      - internal-net
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - internal-net
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./backend/observability/alertmanager:/etc/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    networks:
+      - internal-net
+    depends_on:
+      - discord-webhook-adapter
+
+  discord-webhook-adapter:
+    image: benjojo/alertmanager-discord:latest
+    env_file:
+      - .env
+    ports:
+      - "9094:9094"
+    networks:
+      - internal-net
+
 networks:
   internal-net:
     driver: bridge
 
 volumes:
   db-data:
+  prometheus_data:
+  grafana_data:

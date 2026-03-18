@@ -1,0 +1,39 @@
+name: Deploy Frontend
+
+on:
+  workflow_run:
+    workflows:
+      - Build Frontend
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+  S3_FRONTEND: ${{ secrets.S3_FRONTEND_BUCKET }}
+
+jobs:
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./out
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Sync para S3
+        run: |
+          aws s3 sync ./out s3://${{ env.S3_FRONTEND }} \
+            --delete \
+            --region ${{ env.AWS_REGION }}

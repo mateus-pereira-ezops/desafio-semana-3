@@ -90,7 +90,7 @@ export default function Home() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && createTask()}
-            placeholder="Add a new task"
+            placeholder="Add a new task..."
             style={{
               flex: 1,
               padding: "10px 14px",

@@ -6,10 +6,16 @@ route:
   group_wait: 10s
   group_interval: 30s
   repeat_interval: 2m
-  receiver: "discord"
+  receiver: "all"
 
 receivers:
-  - name: "discord"
+  - name: "all"
     webhook_configs:
       - url: "http://discord-webhook-adapter:9094"
         send_resolved: true
+    slack_configs:
+      - api_url: "YOUR_WEBHOOK_TOKEN"
+        channel: "#alertas"
+        send_resolved: true
+        title: "{{ .GroupLabels.alertname }}"
+        text: "{{ range .Alerts }}{{ .Annotations.description }}{{ end }}"

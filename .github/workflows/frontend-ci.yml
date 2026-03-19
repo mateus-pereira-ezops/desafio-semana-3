@@ -8,6 +8,10 @@ on:
     paths:
       - "frontend/**"
 
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+  S3_FRONTEND: ${{ secrets.S3_FRONTEND_BUCKET }}
+
 jobs:
   lint-frontend:
     name: Lint Frontend
@@ -30,3 +34,52 @@ jobs:
 
       - name: Run lint
         run: npm run lint
+
+  build-frontend:
+    name: Build Frontend
+    needs: lint-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/out
+
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    if: github.ref == "refs/heads/main"
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./out
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync para S3
+        run: |
+          aws s3 sync ./out s3://${{ env.S3_FRONTEND }} \
+            --delete \
+            --region ${{ env.AWS_REGION }}

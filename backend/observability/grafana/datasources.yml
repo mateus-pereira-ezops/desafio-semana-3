@@ -1,0 +1,11 @@
+apiVersion: 1
+datasources:
+  - name: AMP
+    type: prometheus
+    url: YOUR_AMP_ENDPOINT_URL
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      sigV4Auth: true
+      sigV4Region: us-east-2
+      sigV4AuthType: default

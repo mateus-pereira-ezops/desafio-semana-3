@@ -34,3 +34,4 @@ lerna-debug.log*
 # Etc
 backend/observability/grafana/datasources.yml
 backend/observability/grafana/alerting/contact-points.yml
+backend/observability/prometheus/prometheus.yml

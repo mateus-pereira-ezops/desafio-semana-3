@@ -1,16 +1,19 @@
 global:
   scrape_interval: 15s
-  evaluation_interval: 15s
 
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: ["alertmanager:9093"]
-
-rule_files:
-  - /etc/prometheus/alerts.yml
+remote_write:
+  - url: YOUR_REMOTE_WRITE_AMP_ENDPOINT
+    sigv4:
+      region: us-east-2
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+    follow_redirects: true
 
 scrape_configs:
   - job_name: "todo-api"
     static_configs:
-      - targets: ["backend:3001"]
+      - targets: ["backend.local:3001"]
+    metrics_path: /metrics
+    scheme: http

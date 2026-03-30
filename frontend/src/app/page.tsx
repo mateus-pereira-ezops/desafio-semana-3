@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
 type Task = {
   id: number;
   title: string;
@@ -23,7 +21,7 @@ export default function Home() {
 
   async function fetchTasks() {
     try {
-      const res = await fetch(`${API_URL}/api/tasks`);
+      const res = await fetch(`/api/tasks`);
       const data = await res.json();
       setTasks(data);
     } catch (e) {
@@ -37,7 +35,7 @@ export default function Home() {
 
   async function createTask() {
     if (!title.trim()) return;
-    await fetch(`${API_URL}/api/tasks`, {
+    await fetch(`/api/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
@@ -47,7 +45,7 @@ export default function Home() {
   }
 
   async function toggleTask(task: Task) {
-    await fetch(`${API_URL}/api/tasks/${task.id}`, {
+    await fetch(`/api/tasks/${task.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ done: !task.done }),
@@ -56,7 +54,7 @@ export default function Home() {
   }
 
   async function deleteTask(id: number) {
-    await fetch(`${API_URL}/api/tasks/${id}`, { method: "DELETE" });
+    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
     fetchTasks();
   }
 

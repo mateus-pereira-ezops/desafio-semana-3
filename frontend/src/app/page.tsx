@@ -124,7 +124,7 @@ export default function Home() {
         <div style={{
           background: "#fff",
           borderRadius: 12,
-          border: "1px solid #e5e5e5",
+          border: "1px solid #e5e5e4",
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           overflow: "hidden",
         }}>
